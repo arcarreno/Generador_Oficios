@@ -295,11 +295,11 @@ body {
   pointer-events: none;
 }
 
-/* Content — márgenes exactos del Word: top/bottom 2.5cm, left/right 3.0cm */
+/* Content — márgenes exactos del Word: top 1.5cm, left/right 3.0cm */
 .oficio-content {
   position: relative;
   z-index: 1;
-  padding: 2.5cm 3.0cm 6.5cm;
+  padding: 1.5cm 3.0cm 0.5cm;
 }
 
 /* Header */
@@ -526,7 +526,7 @@ tr:hover .row-delete-btn {
   background: #f5eef2;
 }
 
-/* Footer — posición fija a 22cm del tope (regla de Word) */
+/* Footer — posición fija a 22cm del tope */
 .oficio-footer {
   position: absolute;
   top: 22cm;
@@ -536,7 +536,7 @@ tr:hover .row-delete-btn {
   z-index: 1;
   padding: 2.75cm 0 0 12.99cm;
   pointer-events: none;
-  opacity: 0.65;
+  opacity: 0.75;
 }
 
 .footer-text {
@@ -580,18 +580,18 @@ tr:hover .row-delete-btn {
     background: transparent !important;
   }
   .oficio-footer {
-    position: relative;
-    left: auto;
-    top: auto;
-    width: auto;
-    margin-top: 20px;
-  padding: 2.75cm 0 0 12.99cm;
+    position: absolute;
+    top: 22cm;
+    left: 0;
+    width: 100%;
+    margin: 0;
+    padding: 2.75cm 0 0 12.99cm;
     text-align: left;
   }
   .row-delete-btn { display: none; }
   .resize-handle { display: none; }
   .drag-handle { display: none; }
-  .page-continuation .oficio-content { padding-top: 2.5cm; }
+  .page-continuation .oficio-content { padding-top: 1.5cm; }
 }
 
 /* Export modal overlay */
@@ -630,7 +630,7 @@ tr:hover .row-delete-btn {
 
 /* Continuation page top spacer (simula 5.7cm de inicio sin header) */
 .page-continuation .oficio-content {
-  padding-top: 5.7cm;
+  padding-top: 4.7cm;
 }
 
 /* Drag handles — inline in every block */

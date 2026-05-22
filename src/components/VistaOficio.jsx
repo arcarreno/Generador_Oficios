@@ -205,12 +205,13 @@ export default function VistaOficio({ recipient, rows, onBack }) {
     setExporting(false)
   }
 
-  const movableDefaults = ['mainTable', 'compromiso', 'contacto', 'contactsTable', 'cierre', 'firma', 'ccp']
+  const movableDefaults = ['mainTable', 'compromiso', 'contacto', 'contactsTable', 'cierre', 'firma']
   const [blockOrder, setBlockOrder] = useState(movableDefaults)
   const [dragState, setDragState] = useState({ dragging: null, over: null, insertAfter: false })
   const dragGhostRef = useRef(null)
   const draggingRef = useRef(null)
-  const overflowAdjustRef = useRef(0)
+  const firstOverflowRef = useRef(0)
+  const contOverflowRef = useRef(0)
   const [overflowTick, setOverflowTick] = useState(0)
   const overflowIterRef = useRef(0)
   const lastContentKeyRef = useRef('')
@@ -308,13 +309,14 @@ export default function VistaOficio({ recipient, rows, onBack }) {
       const len = [row.control, row.peticion, row.oficioRecibido, row.turnadoA]
         .reduce((max, t) => Math.max(max, strip(t).length), 0)
       const lines = Math.max(1, Math.ceil(len / 22))
-      return 0.28 + lines * 0.38
+      return 0.28 + lines * 0.42 // 0.42cm/linea (padding + border de celda)
     }
 
     function textH(text) {
       const len = (text || '').replace(/<[^>]*>/g, '').length
-      const lines = Math.max(1, Math.ceil(len / 80))
-      return 0.28 + lines * 0.54
+      const lines = Math.max(1, Math.ceil(len / 75)) // 75 chars/line con text-indent 0.5in
+      const pMargin = 0.26 // margin-bottom 10px (text-indent 0.5in no afecta altura)
+      return pMargin + lines * 0.54
     }
 
     function blockH(block) {
@@ -329,16 +331,33 @@ export default function VistaOficio({ recipient, rows, onBack }) {
       return map[block] ?? 0.8
     }
 
-    // Content starts at ~5.7cm (page-continuation padding), footer at 22cm → 16.3cm usable
-    const PAGE_H = Math.max(14, 16.3 - overflowAdjustRef.current)
+    // Sobrecarga fija de tabla: margin 14px + thead (padding+text+border) ≈ 1.2cm
+    const TABLE_OVERHEAD = 1.2
+
+    // Altura real del encabezado de primera página (elementos fijos + fundamento)
+    //   header-year: margin-top 1.6cm + linea 9pt ≈ 2.04cm
+    //   header-oficio-num: margin-top 2px + linea 10.5pt ≈ 0.57cm
+    //   oficio-header margin-bottom: 32px ≈ 0.85cm
+    //   destinatario-line: ≈ 0.53cm
+    //   cargo-line: ≈ 0.53cm
+    //   presente-line: ≈ 0.96cm
+    //   Total: 5.49cm
+    const FIXED_HEADER_H = 5.49
+    const headerH = FIXED_HEADER_H + textH(editData.fundamento)
+    // Footer a 22cm, padding-top 1.5cm, padding-bottom 0.5cm
+    // → row budget = 22 - 1.5 - headerH - 0.5 = 20 - headerH
+    const firstAdjust = firstOverflowRef.current
+    const contAdjust = contOverflowRef.current
+    const FIRST_PAGE_BUDGET = Math.max(6, 20.0 - headerH - firstAdjust)
+    const CONT_PAGE_BUDGET = Math.max(6, 17.3 - contAdjust)
 
     const total = rowsData.length
     const wrap = (arr) => arr.map(r => ({ ...r }))
     const result = []
-    const blocks = blockOrder.filter(b => b !== 'mainTable')
+    const blocks = blockOrder.filter(b => b !== 'mainTable' && b !== 'ccp')
 
     // === Helper: split items into page-sized batches ===
-    function splitBatches(items, heightFn) {
+    function splitBatches(items, heightFn, budget) {
       let i = 0
       const batches = []
       while (i < items.length) {
@@ -348,7 +367,9 @@ export default function VistaOficio({ recipient, rows, onBack }) {
           const item = items[i]
           const h = heightFn(item)
           const needed = item === 'contactsTable' ? Math.max(h * 1.3, h + 1.5) : h
-          if (u + needed <= PAGE_H) { batch.push(item); u += h; i++ }
+          const hasCierre = batch.includes('cierre')
+          const forceFirma = hasCierre && item === 'firma'
+          if (forceFirma || u + needed <= budget) { batch.push(item); u += h; i++ }
           else break
         }
         if (batch.length === 0 && i < items.length) { batch.push(items[i]); i++ }
@@ -359,15 +380,42 @@ export default function VistaOficio({ recipient, rows, onBack }) {
 
     // No rows → single page with header + blocks
     if (total === 0) {
-      const batches = splitBatches(blocks, blockH)
-      return batches.map((bp, i) => ({ type: 'tail', blocks: bp, isFirst: i === 0 }))
+      const firstBudget = FIRST_PAGE_BUDGET
+      const batches = []
+      let bi = 0
+      // First batch uses FIRST_PAGE_BUDGET (includes header overhead)
+      if (bi < blocks.length) {
+        let u = 0
+        const batch = []
+        let lastWasCierre = false
+        while (bi < blocks.length) {
+          const h = blockH(blocks[bi])
+          const needed = blocks[bi] === 'contactsTable' ? Math.max(h * 1.3, h + 1.5) : h
+          const forceFirma = lastWasCierre && blocks[bi] === 'firma'
+          if (forceFirma || u + needed <= firstBudget) { batch.push(blocks[bi]); u += h; lastWasCierre = blocks[bi] === 'cierre'; bi++ }
+          else break
+        }
+        if (batch.length === 0 && bi < blocks.length) { batch.push(blocks[bi]); bi++ }
+        batches.push({ type: 'tail', blocks: batch, isFirst: true })
+      }
+      // Remaining batches use CONT_PAGE_BUDGET (no header)
+      const restBatches = splitBatches(blocks.slice(bi), blockH, CONT_PAGE_BUDGET)
+      restBatches.forEach(b => batches.push({ type: 'tail', blocks: b }))
+      // fillPadding para la última página
+      const lp = batches[batches.length - 1]
+      if (lp && lp.blocks) {
+        const usedH = lp.blocks.reduce((s, b) => s + blockH(b), 0)
+        const bgt = lp.isFirst ? FIRST_PAGE_BUDGET : CONT_PAGE_BUDGET
+        lp.fillPadding = Math.max(0, bgt - usedH - 0.5)
+      }
+      return batches
     }
 
     // === ROW PAGES ===
     let idx = 0
     let used = 0
     const p1 = []
-    const firstRowsBudget = PAGE_H - 3.5
+    const firstRowsBudget = FIRST_PAGE_BUDGET
     while (idx < total) {
       const h = rowH(rowsData[idx])
       if (used + h <= firstRowsBudget) { p1.push(rowsData[idx]); used += h; idx++ }
@@ -381,7 +429,7 @@ export default function VistaOficio({ recipient, rows, onBack }) {
       const batch = []
       while (idx < total) {
         const h = rowH(rowsData[idx])
-        if (u + h <= PAGE_H) { batch.push(rowsData[idx]); u += h; idx++ }
+        if (u + h <= CONT_PAGE_BUDGET) { batch.push(rowsData[idx]); u += h; idx++ }
         else break
       }
       if (batch.length === 0 && idx < total) { batch.push(rowsData[idx]); idx++ }
@@ -394,23 +442,28 @@ export default function VistaOficio({ recipient, rows, onBack }) {
     const last = result[result.length - 1]
     if (last && last.type === 'table') {
       const lastRowsH = last.rows.reduce((s, r) => s + rowH(r), 0)
-      let remaining = Math.max(0, PAGE_H - lastRowsH)
-      if (last.isFirst) remaining = Math.max(0, remaining - 3.5)
+      const pageBudget = last.isFirst ? FIRST_PAGE_BUDGET : CONT_PAGE_BUDGET
+      let remaining = Math.max(0, pageBudget - lastRowsH - TABLE_OVERHEAD)
 
       const merged = []
       let mu = 0
+      let lastWasCierre = false
       for (const b of blocks) {
         const h = blockH(b)
         const needed = b === 'contactsTable' ? Math.max(h * 1.3, h + 1.5) : h
-        if (mu + needed <= remaining) { merged.push(b); mu += h }
+        const forceFirma = lastWasCierre && b === 'firma'
+        if (forceFirma || mu + needed <= remaining) { merged.push(b); mu += h; lastWasCierre = b === 'cierre' }
         else break
       }
 
       if (merged.length > 0) {
         last.tailBlocks = merged
+        const mergedH = lastRowsH + merged.reduce((s, b) => s + blockH(b), 0)
+        const budget = last.isFirst ? FIRST_PAGE_BUDGET : CONT_PAGE_BUDGET
+        last.fillPadding = Math.max(0, budget - mergedH - TABLE_OVERHEAD - 0.5)
         const rest = blocks.slice(merged.length)
         if (rest.length > 0) {
-          const tailBatches = splitBatches(rest, blockH)
+          const tailBatches = splitBatches(rest, blockH, CONT_PAGE_BUDGET)
           tailBatches.forEach(b => result.push({ type: 'tail', blocks: b }))
         }
         return result
@@ -418,8 +471,23 @@ export default function VistaOficio({ recipient, rows, onBack }) {
     }
 
     // All blocks on their own pages
-    const tailBatches = splitBatches(blocks, blockH)
+    const tailBatches = splitBatches(blocks, blockH, CONT_PAGE_BUDGET)
     tailBatches.forEach(b => result.push({ type: 'tail', blocks: b }))
+
+    // Última página: relleno proporcional para evitar espacio vacío antes del footer
+    if (result.length > 0) {
+      const last = result[result.length - 1]
+      if (last.type === 'tail' && last.blocks) {
+        const usedH = last.blocks.reduce((s, b) => s + blockH(b), 0)
+        const budget = last.isFirst ? FIRST_PAGE_BUDGET : CONT_PAGE_BUDGET
+        last.fillPadding = Math.max(0, budget - usedH - 0.5)
+      } else if (last.type === 'table') {
+        const lastRowsH = last.rows.reduce((s, r) => s + rowH(r), 0)
+        const blocksH = (last.tailBlocks || []).reduce((s, b) => s + blockH(b), 0)
+        const budget = last.isFirst ? FIRST_PAGE_BUDGET : CONT_PAGE_BUDGET
+        last.fillPadding = Math.max(0, budget - lastRowsH - blocksH - TABLE_OVERHEAD - 0.5)
+      }
+    }
 
     return result
   }, [rowsData, blockOrder, contactos, editData, overflowTick])
@@ -430,8 +498,9 @@ export default function VistaOficio({ recipient, rows, onBack }) {
 
   useLayoutEffect(() => {
     const FOOTER_TOP_PX = 22 * 37.8
-    let maxOverflowCm = 0
-    pageRefs.current.forEach((ref) => {
+    let firstPageOverflow = 0
+    let contPageOverflow = 0
+    pageRefs.current.forEach((ref, i) => {
       if (!ref) return
       const content = ref.querySelector('.oficio-content')
       if (!content) return
@@ -439,20 +508,27 @@ export default function VistaOficio({ recipient, rows, onBack }) {
       const contentBottom = content.getBoundingClientRect().bottom
       const overflowPx = contentBottom - refTop - FOOTER_TOP_PX
       if (overflowPx > 5) {
-        maxOverflowCm = Math.max(maxOverflowCm, overflowPx / 37.8 + 0.1)
+        const cm = overflowPx / 37.8 + 0.1
+        if (i === 0) firstPageOverflow = Math.max(firstPageOverflow, cm)
+        else contPageOverflow = Math.max(contPageOverflow, cm)
       }
     })
     // Reset adjustment when content actually changes (new document/rows/edit)
-    const contentKey = `${editData.fundamento.length}|${rowsData.length}|${contactos.length}|${editData.parrafoCompromiso.length}|${editData.parrafoContacto.length}`
+    const contentKey = `${editData.fundamento.length}|${rowsData.length}|${contactos.length}|${editData.parrafoCompromiso.length}|${editData.parrafoContacto.length}|${blockOrder.join(',')}`
     if (contentKey !== lastContentKeyRef.current) {
       lastContentKeyRef.current = contentKey
-      overflowAdjustRef.current = 0
+      firstOverflowRef.current = 0
+      contOverflowRef.current = 0
       overflowIterRef.current = 0
     }
-    if (maxOverflowCm > 0 && overflowIterRef.current < 3) {
-      overflowAdjustRef.current += maxOverflowCm
-      overflowIterRef.current++
-      setOverflowTick(t => t + 1)
+    if (overflowIterRef.current < 3) {
+      let changed = false
+      if (firstPageOverflow > 0) { firstOverflowRef.current += firstPageOverflow; changed = true }
+      if (contPageOverflow > 0) { contOverflowRef.current += contPageOverflow; changed = true }
+      if (changed) {
+        overflowIterRef.current++
+        setOverflowTick(t => t + 1)
+      }
     }
   }, [pages, overflowTick])
 
@@ -585,7 +661,7 @@ export default function VistaOficio({ recipient, rows, onBack }) {
           <div key={`${page.type}-${i}`} className={`oficio-wrapper${!page.isFirst ? ' page-continuation' : ''}`}
             ref={el => { pageRefs.current[i] = el }} style={pageStyle}>
 
-            <div className="oficio-content">
+            <div className="oficio-content" style={page.fillPadding ? { paddingBottom: `${page.fillPadding + 0.5}cm` } : undefined}>
               {/* === PÁGINA DE TABLA === */}
               {page.type === 'table' && (
                 <>
@@ -622,7 +698,7 @@ export default function VistaOficio({ recipient, rows, onBack }) {
                   <table className="tabla-oficio">
                     <thead>
                       <tr>
-                        {['N° Control', 'Solicitud/Petición', 'Oficio Recibido', 'Turnado A:'].map((label, j) => (
+                        {['OFICIO RECIBIDO', 'SOLICITUD', 'FOLIO ST', 'OFICIO DE RESPUESTA Y/O SEGUIMIENTO'].map((label, j) => (
                           <th key={j} style={colWidths[j] ? { width: colWidths[j], minWidth: colWidths[j] } : undefined}>
                             {label}
                             <div className="resize-handle" onMouseDown={e => initResize(e, j)} />
@@ -635,13 +711,13 @@ export default function VistaOficio({ recipient, rows, onBack }) {
                         <tr key={`r-${r._origIdx}`}>
                           <td style={colWidths[0] ? { width: colWidths[0] } : undefined}
                             contentEditable suppressContentEditableWarning
-                            onBlur={e => editCell(r._origIdx, 'control', e)} dangerouslySetInnerHTML={{ __html: r.control }} />
+                            onBlur={e => editCell(r._origIdx, 'oficioRecibido', e)} dangerouslySetInnerHTML={{ __html: r.oficioRecibido }} />
                           <td style={colWidths[1] ? { width: colWidths[1] } : undefined}
                             contentEditable suppressContentEditableWarning
                             onBlur={e => editCell(r._origIdx, 'peticion', e)} dangerouslySetInnerHTML={{ __html: r.peticion }} />
                           <td style={colWidths[2] ? { width: colWidths[2] } : undefined}
                             contentEditable suppressContentEditableWarning
-                            onBlur={e => editCell(r._origIdx, 'oficioRecibido', e)} dangerouslySetInnerHTML={{ __html: r.oficioRecibido }} />
+                            onBlur={e => editCell(r._origIdx, 'control', e)} dangerouslySetInnerHTML={{ __html: r.control }} />
                           <td className="last-cell" style={colWidths[3] ? { width: colWidths[3] } : undefined}>
                             <span contentEditable suppressContentEditableWarning
                               onBlur={e => editCell(r._origIdx, 'turnadoA', e)} dangerouslySetInnerHTML={{ __html: r.turnadoA }} />
@@ -683,6 +759,8 @@ export default function VistaOficio({ recipient, rows, onBack }) {
                   {renderBlocks(page.blocks)}
                 </>
               )}
+              {/* CCP siempre al final de la última página */}
+              {i === pages.length - 1 && renderBlocks(['ccp'])}
             </div>
 
             {/* Footer en todas las páginas */}

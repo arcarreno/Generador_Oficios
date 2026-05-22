@@ -291,7 +291,7 @@ class GradientBackground {
 }
 
 const colorSchemes = {
-  1: { color1: [0.49, 0.141, 0.278], color2: [0.255, 0.314, 0.302], color3: [1.0, 1.0, 1.0] },
+  1: { color1: [0.49, 0.141, 0.278], color2: [0.255, 0.314, 0.302], color3: [0.49, 0.141, 0.278], color4: [0.255, 0.314, 0.302], color5: [0.49, 0.141, 0.278], color6: [0.255, 0.314, 0.302] },
   2: { color1: [1.0, 0.424, 0.314], color2: [0.251, 0.878, 0.816] },
   3: { color1: [0.945, 0.353, 0.133], color2: [0.039, 0.055, 0.153], color3: [0.251, 0.878, 0.816] },
   4: { color1: [0.949, 0.4, 0.2], color2: [0.176, 0.42, 0.427], color3: [0.82, 0.686, 0.612] },
@@ -314,15 +314,25 @@ function setColorScheme(uniforms, scene, scheme, darkNavyColor) {
   const rgb = hexToRgb(bgHex);
   if (rgb) uniforms.uDarkNavy.value.set(rgb.r, rgb.g, rgb.b);
 
-  if (scheme === 1 || scheme >= 5) {
+  if (scheme === 1) {
+    scene.background = new THREE.Color(0xffffff);
+    uniforms.uDarkNavy.value.set(1, 1, 1);
     uniforms.uGradientSize.value = 0.45;
     uniforms.uGradientCount.value = 12.0;
     uniforms.uSpeed.value = 1.5;
     uniforms.uColor1Weight.value = 0.5;
     uniforms.uColor2Weight.value = 1.8;
+    uniforms.uIntensity.value = 2.5;
+    uniforms.uGrainIntensity.value = 0;
   } else if (scheme === 4) {
     scene.background = new THREE.Color(0xffffff);
     uniforms.uDarkNavy.value.set(0, 0, 0);
+  } else if (scheme >= 5) {
+    uniforms.uGradientSize.value = 0.45;
+    uniforms.uGradientCount.value = 12.0;
+    uniforms.uSpeed.value = 1.5;
+    uniforms.uColor1Weight.value = 0.5;
+    uniforms.uColor2Weight.value = 1.8;
   } else {
     uniforms.uGradientSize.value = 1.0;
     uniforms.uGradientCount.value = 6.0;
