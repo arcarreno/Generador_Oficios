@@ -1,3 +1,13 @@
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeInModal {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
 /* Reset */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -19,7 +29,7 @@ body {
   gap: 8px;
   padding: 10px 22px;
   border: none;
-  border-radius: 8px;
+  border-radius: 999px;
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
@@ -68,6 +78,7 @@ body {
   min-height: 100vh;
   text-align: center;
   padding: 40px;
+  animation: fadeIn 0.35s ease;
 }
 .upload-area h1 {
   font-size: 28px;
@@ -89,6 +100,10 @@ body {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+.modal {
+  animation: fadeInModal 0.25s ease;
 }
 .modal {
   background: #fff;
@@ -123,7 +138,8 @@ body {
   background: #e8edf2;
   color: #7d2447;
   font-weight: 600;
-  padding: 12px 24px;
+  padding: 12px 28px;
+  border-radius: 999px;
 }
 .btn-sheet:hover { background: #d0d9e4; }
 
@@ -156,6 +172,7 @@ body {
   max-width: 900px;
   margin: 0 auto;
   padding: 40px 20px;
+  animation: fadeIn 0.35s ease;
 }
 .recipient-header {
   display: flex;
@@ -181,10 +198,10 @@ body {
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
-  padding: 14px 18px;
+  padding: 16px 22px;
   background: #fff;
   border: 1px solid #dde1e6;
-  border-radius: 10px;
+  border-radius: 16px;
   text-align: left;
   font-weight: 500;
   cursor: pointer;
@@ -209,6 +226,7 @@ body {
   background: #e8eaed;
   min-height: 100vh;
   padding: 20px;
+  animation: fadeIn 0.35s ease;
 }
 
 .oficio-toolbar {
