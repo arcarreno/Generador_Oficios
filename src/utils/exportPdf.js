@@ -1,9 +1,6 @@
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
-
-function sanitizeFilename(name) {
-  return name.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim().replace(/\s+/g, '_')
-}
+import { sanitizeFilename } from './excelParser'
 
 export async function exportToPdf(elements, recipientName) {
   if (!elements || elements.length === 0) return
@@ -13,7 +10,7 @@ export async function exportToPdf(elements, recipientName) {
       html2canvas(el, {
         scale: 2,
         useCORS: true,
-        allowTaint: false,
+        allowTaint: true,
         backgroundColor: '#ffffff',
         logging: false,
       })
@@ -29,8 +26,10 @@ export async function exportToPdf(elements, recipientName) {
 
   pages.forEach((canvas, i) => {
     const imgData = canvas.toDataURL('image/png')
-    if (i > 0) pdf.addPage([canvas.width / 2, canvas.height / 2])
-    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width / 2, canvas.height / 2)
+    const w = canvas.width / 2
+    const h = canvas.height / 2
+    if (i > 0) pdf.addPage([w, h])
+    pdf.addImage(imgData, 'PNG', 0, 0, w, h)
   })
 
   pdf.save(`oficio_${sanitizeFilename(recipientName || 'documento')}.pdf`)

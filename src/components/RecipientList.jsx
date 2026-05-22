@@ -9,9 +9,9 @@ export default function RecipientList({ recipients, onSelect, onBack }) {
         Se encontraron {recipients.length} destinatarios. Selecciona uno para generar su oficio:
       </p>
       <div className="recipient-grid">
-        {recipients.map((r) => (
+        {recipients.map((r, idx) => (
           <button
-            key={`${r.name}-${r.rows.length}`}
+            key={`${r.name}-${idx}`}
             className="btn recipient-card"
             onClick={() => onSelect(r)}
           >
