@@ -1,57 +1,77 @@
 import { formatDate, contactos } from './oficioTemplate'
-import { escapeHtml, getCargo } from './excelParser'
+import { escapeHtml, getCargo, sanitizeFilename } from './excelParser'
 import letterheadUrl from '../assets/letterhead.jpg'
-
-function sanitizeFilename(name) {
-  return name.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim().replace(/\s+/g, '_')
-}
 
 let letterheadDataUrl = null
 
 async function getLetterheadDataUrl() {
   if (letterheadDataUrl) return letterheadDataUrl
-  const resp = await fetch(letterheadUrl)
-  const blob = await resp.blob()
-  return new Promise((resolve) => {
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      letterheadDataUrl = reader.result
-      resolve(letterheadDataUrl)
+  try {
+    const resp = await fetch(letterheadUrl)
+    if (!resp.ok) {
+      console.warn('No se pudo cargar la imagen del membrete (status ' + resp.status + '). Se exportará sin fondo.')
+      return null
     }
-    reader.readAsDataURL(blob)
-  })
+    const blob = await resp.blob()
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onerror = () => {
+        console.warn('Error al leer la imagen del membrete. Se exportará sin fondo.')
+        resolve(null)
+      }
+      reader.onloadend = () => {
+        letterheadDataUrl = reader.result
+        resolve(letterheadDataUrl)
+      }
+      reader.readAsDataURL(blob)
+    })
+  } catch {
+    console.warn('Error de red al cargar la imagen del membrete. Se exportará sin fondo.')
+    return null
+  }
 }
 
 export async function exportToWord(data) {
-  const { recipient, rows, oficioFull, editData } = data
+  if (!data || !data.recipient || !Array.isArray(data.rows)) {
+    throw new Error('Faltan campos requeridos para exportar a Word')
+  }
+
+  const { recipient, rows = [], oficioFull = '', editData = {} } = data
   const cargo = getCargo(recipient)
   const year = editData.year || `${new Date().getFullYear()}, Año de Margarita Maza Parada`
 
   const table1Rows = rows.map(r => `
     <tr>
-      <td style="border:1px solid #000;padding:4px 6px;font-family:'Poppins',sans-serif;font-size:9pt;text-align:center;">${escapeHtml(r.control)}</td>
-      <td style="border:1px solid #000;padding:4px 6px;font-family:'Poppins',sans-serif;font-size:9pt;text-align:center;">${escapeHtml(r.peticion)}</td>
-      <td style="border:1px solid #000;padding:4px 6px;font-family:'Poppins',sans-serif;font-size:9pt;text-align:center;">${escapeHtml(r.oficioRecibido)}</td>
-      <td style="border:1px solid #000;padding:4px 6px;font-family:'Poppins',sans-serif;font-size:9pt;text-align:center;">${escapeHtml(r.turnadoA)}</td>
+      <td style="border:1px solid #000;padding:4px 6px;font-family:'Poppins','Calibri','Arial',sans-serif;font-size:9pt;text-align:center;">${escapeHtml(r.control)}</td>
+      <td style="border:1px solid #000;padding:4px 6px;font-family:'Poppins','Calibri','Arial',sans-serif;font-size:9pt;text-align:center;">${escapeHtml(r.peticion)}</td>
+      <td style="border:1px solid #000;padding:4px 6px;font-family:'Poppins','Calibri','Arial',sans-serif;font-size:9pt;text-align:center;">${escapeHtml(r.oficioRecibido)}</td>
+      <td style="border:1px solid #000;padding:4px 6px;font-family:'Poppins','Calibri','Arial',sans-serif;font-size:9pt;text-align:center;">${escapeHtml(r.turnadoA)}</td>
     </tr>
   `).join('')
 
   const table2Rows = contactos.map((c, i) => `
     <tr>
-      <td style="border:1px solid #000;padding:4px 6px;font-family:'Poppins',sans-serif;font-size:10pt;text-align:center;${i === 0 ? 'background:#E7E6E6;' : ''}">${escapeHtml(c.area)}</td>
-      <td style="border:1px solid #000;padding:4px 6px;font-family:'Poppins',sans-serif;font-size:10pt;text-align:center;${i === 0 ? 'background:#E7E6E6;' : ''}">${escapeHtml(c.telefono)}</td>
+      <td style="border:1px solid #000;padding:4px 6px;font-family:'Poppins','Calibri','Arial',sans-serif;font-size:10pt;text-align:center;${i === 0 ? 'background:#E7E6E6;' : ''}">${escapeHtml(c.area)}</td>
+      <td style="border:1px solid #000;padding:4px 6px;font-family:'Poppins','Calibri','Arial',sans-serif;font-size:10pt;text-align:center;${i === 0 ? 'background:#E7E6E6;' : ''}">${escapeHtml(c.telefono)}</td>
     </tr>
   `).join('')
 
   const bgUrl = await getLetterheadDataUrl()
 
   const html = `<!DOCTYPE html>
-<html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
 <head>
   <meta charset="UTF-8">
+  <!--[if gte mso 9]>
+  <xml>
+    <w:WordDocument>
+      <w:View>Print</w:View>
+    </w:WordDocument>
+  </xml>
+  <![endif]-->
   <style>
     @page { size: letter; margin: 1in 1.2in; }
-    body { font-family: 'Poppins', 'Calibri', sans-serif; margin: 0; padding: 1in 1.2in; color: #000; background-image: url('${bgUrl}'); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; }
+    body { font-family: 'Poppins', 'Calibri', 'Arial', sans-serif; margin: 0; padding: 0; color: #000; background-color: #fff; }
     .header { text-align: right; margin-bottom: 40px; }
     .header .year { font-size: 9pt; font-style: italic; }
     .header .oficio-num { font-size: 10.5pt; font-weight: bold; }
@@ -62,8 +82,8 @@ export async function exportToWord(data) {
     .cuerpo p { margin: 0 0 10px 0; text-align: justify; text-indent: 0.5in; }
     .cuerpo p.no-indent { text-indent: 0; }
     table { border-collapse: collapse; width: 100%; margin: 15px 0; }
-    th { background: #E7E6E6; border: 1px solid #000; padding: 6px 8px; font-family: 'Poppins', sans-serif; font-size: 9pt; text-align: center; font-weight: bold; }
-    td { border: 1px solid #000; padding: 4px 6px; font-family: 'Poppins', sans-serif; font-size: 9pt; text-align: center; }
+    th { background: #E7E6E6; border: 1px solid #000; padding: 6px 8px; font-family: 'Poppins', 'Calibri', 'Arial', sans-serif; font-size: 9pt; text-align: center; font-weight: bold; }
+    td { border: 1px solid #000; padding: 4px 6px; font-family: 'Poppins', 'Calibri', 'Arial', sans-serif; font-size: 9pt; text-align: center; }
     .firma { text-align: center; margin-top: 40px; }
     .firma .atentamente { font-size: 11pt; font-weight: bold; }
     .firma .ciudad { font-size: 11pt; font-weight: bold; }
@@ -75,6 +95,10 @@ export async function exportToWord(data) {
   </style>
 </head>
 <body>
+  ${bgUrl ? `<div style="mso-element:header">
+    <img src="${bgUrl}" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1;" />
+  </div>` : ''}
+
   <div class="header">
     <div class="year">"${escapeHtml(year)}"</div>
     <div class="oficio-num">${escapeHtml(oficioFull || 'OFICIO Núm.')}</div>
@@ -120,6 +144,8 @@ export async function exportToWord(data) {
     <p>${escapeHtml(editData.cierre || '')}</p>
   </div>
 
+  <!--[if gte mso 9]><br clear="all" style="mso-page-break-before:always" /><![endif]-->
+
   <div class="firma">
     <div class="atentamente">ATENTAMENTE</div>
     <div class="ciudad">CUATRO VECES HEROICA PUEBLA DE ZARAGOZA, A ${escapeHtml(formatDate())}</div>
@@ -148,6 +174,9 @@ export async function exportToWord(data) {
   const a = document.createElement('a')
   a.href = url
   a.download = `oficio_${sanitizeFilename(recipient || 'documento')}.doc`
+  a.style.display = 'none'
+  document.body.appendChild(a)
   a.click()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  document.body.removeChild(a)
+  setTimeout(() => URL.revokeObjectURL(url), 30000)
 }

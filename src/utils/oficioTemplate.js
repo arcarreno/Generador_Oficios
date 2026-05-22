@@ -13,8 +13,10 @@ export function formatDate() {
   return `${String(d.getDate()).padStart(2, '0')} DE ${meses[d.getMonth()]} DE ${d.getFullYear()}`
 }
 
-export function formatYearTag() {
-  return `${new Date().getFullYear()}, Año de Margarita Maza Parada`
+export function formatYearTag(yearTheme) {
+  const year = new Date().getFullYear()
+  if (yearTheme) return `${year}, ${yearTheme}`
+  return `${year}, Año de Margarita Maza Parada`
 }
 
 export function getInfoTemplate(recipientName) {

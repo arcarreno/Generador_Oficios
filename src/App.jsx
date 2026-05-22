@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import UploadButton from './components/UploadButton'
 import SheetSelector from './components/SheetSelector'
 import RecipientList from './components/RecipientList'
@@ -13,9 +13,11 @@ export default function App() {
   const [recipients, setRecipients] = useState([])
   const [selectedRecipient, setSelectedRecipient] = useState(null)
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleFileLoad = (data) => {
+  const handleFileLoad = useCallback((data) => {
     setError('')
+    setLoading(true)
     try {
       const wb = parseWorkbook(data)
       const sheetNames = getDataSheets(wb)
@@ -29,10 +31,12 @@ export default function App() {
       setSelectedRecipient(null)
     } catch (err) {
       setError(err.message || 'Error al procesar el archivo.')
+    } finally {
+      setLoading(false)
     }
-  }
+  }, [])
 
-  const handleSheetSelect = (name) => {
+  const handleSheetSelect = useCallback((name) => {
     setError('')
     if (!workbook) return
     try {
@@ -42,18 +46,40 @@ export default function App() {
         return
       }
       setRecipients(list)
-    } catch {
-      setError('Error al procesar los datos de la hoja.')
+      // Liberamos el workbook ya que no se necesita más
+      setWorkbook(null)
+    } catch (err) {
+      setError(err.message || 'Error al procesar los datos de la hoja.')
     }
-  }
+  }, [workbook])
+
+  const handleBackRecipients = useCallback(() => {
+    setRecipients([])
+    setSheets([])
+    setWorkbook(null)
+    setError('')
+  }, [])
+
+  const handleBackSheets = useCallback(() => {
+    setRecipients([])
+    setSheets([])
+    setWorkbook(null)
+    setError('')
+  }, [])
+
+  const handleBackLetter = useCallback(() => {
+    setSelectedRecipient(null)
+  }, [])
 
   if (selectedRecipient) {
     return (
-      <ErrorBoundary>
+      <ErrorBoundary
+        onReset={() => { setSelectedRecipient(null); setError('') }}
+      >
         <VistaOficio
           recipient={selectedRecipient}
           rows={selectedRecipient.rows}
-          onBack={() => setSelectedRecipient(null)}
+          onBack={handleBackLetter}
         />
       </ErrorBoundary>
     )
@@ -61,11 +87,13 @@ export default function App() {
 
   if (recipients.length > 0) {
     return (
-      <ErrorBoundary>
+      <ErrorBoundary
+        onReset={() => { setRecipients([]); setError('') }}
+      >
         <RecipientList
           recipients={recipients}
           onSelect={setSelectedRecipient}
-          onBack={() => { setRecipients([]); setSheets([]); setWorkbook(null) }}
+          onBack={handleBackRecipients}
         />
       </ErrorBoundary>
     )
@@ -73,16 +101,21 @@ export default function App() {
 
   if (sheets.length > 0) {
     return (
-      <ErrorBoundary>
+      <ErrorBoundary
+        onReset={() => { setSheets([]); setError('') }}
+      >
         <SheetSelector sheets={sheets} onSelect={handleSheetSelect} error={error} />
       </ErrorBoundary>
     )
   }
 
   return (
-    <ErrorBoundary>
+    <ErrorBoundary
+      onReset={() => setError('')}
+    >
       <UploadButton onFileLoad={handleFileLoad} />
-      {error && <div className="global-error">{error}</div>}
+      {loading && <div style={{ textAlign: 'center', marginTop: 20, color: '#666' }}>Procesando archivo...</div>}
+      {error && !loading && <div className="global-error">{error}</div>}
     </ErrorBoundary>
   )
 }

@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback } from 'react'
+import { useState, useRef, useMemo, useCallback, useEffect } from 'react'
 import { getInfoTemplate, contactos, formatDate, formatYearTag } from '../utils/oficioTemplate'
 import { getCargo } from '../utils/excelParser'
 import { exportToPdf } from '../utils/exportPdf'
@@ -6,50 +6,58 @@ import { exportToWord } from '../utils/exportWord'
 import DOMPurify from 'dompurify'
 import letterhead from '../assets/letterhead.jpg'
 
+const TODAY = formatDate() // estable para toda la sesión del componente
+
 export default function VistaOficio({ recipient, rows, onBack }) {
   const cargo = useMemo(() => getCargo(recipient.name), [recipient.name])
   const info = useMemo(() => getInfoTemplate(recipient.name), [recipient.name])
   const page1Ref = useRef(null)
   const page2Ref = useRef(null)
+  const colWidthsRef = useRef({})
+  const rafIdRef = useRef(null)
 
   const [oficioFull, setOficioFull] = useState('OFICIO Núm. SEMOVINFRA-ST-079/2026')
   const [yearTag, setYearTag] = useState(formatYearTag())
   const [exporting, setExporting] = useState(false)
-  const [rowsData, setRowsData] = useState(rows.map(r => ({ ...r })))
+  const [rowsData, setRowsData] = useState(
+    rows.map(r => ({
+      control: DOMPurify.sanitize(r.control || ''),
+      oficioRecibido: DOMPurify.sanitize(r.oficioRecibido || ''),
+      peticion: DOMPurify.sanitize(r.peticion || ''),
+      turnadoA: DOMPurify.sanitize(r.turnadoA || ''),
+    }))
+  )
   const [colWidths, setColWidths] = useState({})
   const [editData, setEditData] = useState({
-    destinatario: info.destinatario,
-    cargo,
-    fundamento: info.fundamento,
-    parrafoCompromiso: info.parrafoCompromiso,
-    parrafoContacto: info.parrafoContacto,
-    cierre: info.cierre,
-    firmaNombre: info.firmaNombre,
-    firmaCargo: info.firmaCargo,
-    archivo: info.archivo,
-    ccp: info.ccp,
-    iniciales: info.iniciales,
+    destinatario: DOMPurify.sanitize(info.destinatario),
+    cargo: DOMPurify.sanitize(cargo),
+    fundamento: DOMPurify.sanitize(info.fundamento),
+    parrafoCompromiso: DOMPurify.sanitize(info.parrafoCompromiso),
+    parrafoContacto: DOMPurify.sanitize(info.parrafoContacto),
+    cierre: DOMPurify.sanitize(info.cierre),
+    firmaNombre: DOMPurify.sanitize(info.firmaNombre),
+    firmaCargo: DOMPurify.sanitize(info.firmaCargo),
+    archivo: DOMPurify.sanitize(info.archivo),
+    ccp: DOMPurify.sanitize(info.ccp),
+    iniciales: DOMPurify.sanitize(info.iniciales),
     year: yearTag,
   })
 
-  const edit = (field, e) => {
+  const edit = useCallback((field, e) => {
     const html = e.currentTarget?.innerHTML ?? ''
     setEditData(prev => ({ ...prev, [field]: DOMPurify.sanitize(html) }))
-  }
+  }, [])
 
-  const editCell = (rowIdx, field, e) => {
+  const editCell = useCallback((rowIdx, field, e) => {
     const html = e.currentTarget?.innerHTML ?? ''
     setRowsData(prev => prev.map((r, i) => i === rowIdx ? { ...r, [field]: DOMPurify.sanitize(html) } : r))
-  }
+  }, [])
 
-  const handleBold = () => {
-    document.execCommand('bold')
-  }
+  const formatText = useCallback((command) => {
+    document.execCommand(command)
+  }, [])
 
-  const handleNormal = () => {
-    document.execCommand('removeFormat')
-  }
-
+  // Resize de columnas con RAF + cleanup de event listeners
   const initResize = useCallback((e, colIdx) => {
     e.preventDefault()
     const th = e.currentTarget.parentElement
@@ -58,7 +66,11 @@ export default function VistaOficio({ recipient, rows, onBack }) {
 
     function onMouseMove(e) {
       const newWidth = Math.max(60, startWidth + (e.clientX - startX))
-      setColWidths(prev => ({ ...prev, [colIdx]: newWidth }))
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current)
+      rafIdRef.current = requestAnimationFrame(() => {
+        colWidthsRef.current = { ...colWidthsRef.current, [colIdx]: newWidth }
+        setColWidths({ ...colWidthsRef.current })
+      })
     }
 
     function onMouseUp() {
@@ -66,6 +78,10 @@ export default function VistaOficio({ recipient, rows, onBack }) {
       document.removeEventListener('mouseup', onMouseUp)
       document.body.style.cursor = ''
       document.body.style.userSelect = ''
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current)
+        rafIdRef.current = null
+      }
     }
 
     document.body.style.cursor = 'col-resize'
@@ -74,7 +90,16 @@ export default function VistaOficio({ recipient, rows, onBack }) {
     document.addEventListener('mouseup', onMouseUp)
   }, [])
 
-  const handleExportPdf = async () => {
+  // Cleanup de event listeners al desmontar
+  useEffect(() => {
+    return () => {
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current)
+    }
+  }, [])
+
+  const handleExportPdf = useCallback(async () => {
     setExporting(true)
     try {
       const elements = [page1Ref.current, page2Ref.current].filter(Boolean)
@@ -85,9 +110,9 @@ export default function VistaOficio({ recipient, rows, onBack }) {
     } finally {
       setExporting(false)
     }
-  }
+  }, [recipient.name])
 
-  const handleExportWord = async () => {
+  const handleExportWord = useCallback(async () => {
     setExporting(true)
     try {
       await exportToWord({
@@ -101,22 +126,22 @@ export default function VistaOficio({ recipient, rows, onBack }) {
     } finally {
       setExporting(false)
     }
-  }
+  }, [recipient.name, rowsData, oficioFull, editData, yearTag])
 
-  const pageStyle = {
+  const pageStyle = useMemo(() => ({
     backgroundImage: `url(${letterhead})`,
     backgroundSize: '21.6cm 27.9cm',
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'top center',
-  }
+  }), [])
 
   return (
     <div className="oficio-page">
       <div className="oficio-toolbar">
         <button className="btn btn-secondary" onClick={onBack}>← Volver</button>
         <div className="toolbar-right">
-          <button className="btn btn-tool" onClick={handleBold} disabled={exporting} title="Negritas"><strong>B</strong></button>
-          <button className="btn btn-tool" onClick={handleNormal} disabled={exporting} title="Texto normal">N</button>
+          <button className="btn btn-tool" onClick={() => formatText('bold')} disabled={exporting} title="Negritas"><strong>B</strong></button>
+          <button className="btn btn-tool" onClick={() => formatText('removeFormat')} disabled={exporting} title="Texto normal">N</button>
           {exporting && <span className="exporting-label">Generando...</span>}
           <button className="btn btn-primary" onClick={handleExportPdf} disabled={exporting}>
             {exporting ? 'Exportando...' : 'Descargar PDF'}
@@ -230,7 +255,7 @@ export default function VistaOficio({ recipient, rows, onBack }) {
 
             <div className="oficio-firma">
               <div className="firma-atentamente">ATENTAMENTE</div>
-              <div className="firma-ciudad">CUATRO VECES HEROICA PUEBLA DE ZARAGOZA, A {formatDate()}</div>
+              <div className="firma-ciudad">CUATRO VECES HEROICA PUEBLA DE ZARAGOZA, A {TODAY}</div>
               <div className="firma-lema">"LA CAPITAL IMPARABLE"</div>
               <div className="firma-nombre" contentEditable suppressContentEditableWarning
                 onBlur={e => edit('firmaNombre', e)} dangerouslySetInnerHTML={{ __html: editData.firmaNombre }} />
