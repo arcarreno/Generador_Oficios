@@ -38,10 +38,10 @@ export async function exportToWord(data) {
     </tr>
   `).join('')
 
-  const table2Rows = contactos.map((c, i) => `
+  const table2Rows = contactos.map(c => `
     <tr>
-      <td style="border:1px solid #000;padding:4px 6px;font-family:'Poppins',sans-serif;font-size:10pt;text-align:center;${i === 0 ? 'background:#E7E6E6;' : ''}">${escapeHtml(c.area)}</td>
-      <td style="border:1px solid #000;padding:4px 6px;font-family:'Poppins',sans-serif;font-size:10pt;text-align:center;${i === 0 ? 'background:#E7E6E6;' : ''}">${escapeHtml(c.telefono)}</td>
+      <td style="border:1px solid #000;padding:4px 6px;font-family:'Poppins',sans-serif;font-size:10pt;text-align:center;">${escapeHtml(c.area)}</td>
+      <td style="border:1px solid #000;padding:4px 6px;font-family:'Poppins',sans-serif;font-size:10pt;text-align:center;">${escapeHtml(c.telefono)}</td>
     </tr>
   `).join('')
 
@@ -68,7 +68,7 @@ export async function exportToWord(data) {
     v\\:* { behavior: url(#default#VML); display: inline-block; }
     o\\:* { behavior: url(#default#VML); display: inline-block; }
     w\\:* { behavior: url(#default#VML); display: inline-block; }
-    @page { size: letter; margin: 1in 1.2in; }
+    @page { size: letter; margin: 1.5cm 3.0cm; }
     body { font-family: 'Poppins', 'Calibri', sans-serif; margin: 0; padding: 1in 1.2in; color: #000;${hasBg ? ` background-image: url('${imgUrl}'); background-repeat: no-repeat; background-position: center;` : ''} }
     .header { text-align: right; margin-bottom: 40px; }
     .header .year { font-size: 9pt; font-style: italic; }

@@ -628,9 +628,9 @@ tr:hover .row-delete-btn {
   text-align: center;
 }
 
-/* Continuation page top spacer (simula 5.7cm de inicio sin header) */
+/* Continuation page — margen moderado (sin simular encabezado completo) */
 .page-continuation .oficio-content {
-  padding-top: 4.7cm;
+  padding-top: 4.5cm;
 }
 
 /* Drag handles — inline in every block */
