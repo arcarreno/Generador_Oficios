@@ -83,8 +83,7 @@ export function getRecipients(workbook, sheetName) {
 
 export function getCargo(recipientName) {
   const name = (recipientName || '').toUpperCase().trim()
-  // Verifica que comience exactamente con "DIP" y que la palabra sea "DIPUTADO"/"DIPUTADA"
-  if (name.startsWith('DIP') && (name.includes('DIPUTAD') || name === 'DIP')) {
+  if (name.startsWith('DIP')) {
     return 'DIPUTADO DEL HONORABLE AYUNTAMIENTO DEL MUNICIPIO DE PUEBLA'
   }
   return 'REGIDOR DEL HONORABLE AYUNTAMIENTO DEL MUNICIPIO DE PUEBLA'

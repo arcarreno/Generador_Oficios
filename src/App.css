@@ -690,3 +690,286 @@ tr:hover .row-delete-btn {
   border-top: 3px solid #7d2447;
   margin-top: -1px;
 }
+
+/* ============ LANDING PAGE ============ */
+.landing-root {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a0a12 50%, #0a0a0a 100%);
+  padding: 2rem;
+}
+
+.landing-card {
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 2rem;
+  padding: 3rem 4rem;
+  max-width: 700px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+
+.landing-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 2rem;
+}
+
+.landing-buttons {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.landing-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2rem 2.5rem;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 1.25rem;
+  background: rgba(255,255,255,0.04);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  min-width: 220px;
+  color: #fff;
+  font-family: inherit;
+}
+
+.landing-btn:hover {
+  transform: translateY(-4px);
+  border-color: #7D2447;
+  background: rgba(125,36,71,0.12);
+  box-shadow: 0 8px 32px rgba(125,36,71,0.2);
+}
+
+.landing-btn-icon {
+  font-size: 2.5rem;
+}
+
+.landing-btn-label {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.landing-btn-desc {
+  font-size: 0.8rem;
+  opacity: 0.5;
+}
+
+.loading-text {
+  text-align: center;
+  margin-top: 1rem;
+  color: rgba(255,255,255,0.5);
+  font-size: 0.9rem;
+}
+
+/* ============ MEMORANDUM PAGE STYLES ============ */
+.memo-page {
+  background: #eaeaea;
+  min-height: 100vh;
+  padding: 72px 20px 20px;
+  animation: fadeIn 0.35s ease;
+}
+
+.memo-toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 14px 20px;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.memo-header {
+  text-align: right;
+  margin-bottom: 28px;
+}
+
+.memo-header-year {
+  font-size: 9pt;
+  font-style: italic;
+  color: #000;
+  margin-top: 1.6cm;
+  opacity: 0.65;
+}
+
+.memo-header-num {
+  font-size: 10.5pt;
+  font-weight: 700;
+  margin-top: 2px;
+  opacity: 0.65;
+}
+.memo-header-num[contenteditable]:hover,
+.memo-header-num[contenteditable]:focus {
+  outline: 1px dashed #7d2447;
+  background: #f5eef2;
+}
+
+.memo-fecha {
+  font-size: 10.5pt;
+  text-align: right;
+  margin-bottom: 4px;
+  opacity: 0.65;
+}
+.memo-fecha[contenteditable]:hover,
+.memo-fecha[contenteditable]:focus {
+  outline: 1px dashed #7d2447;
+  background: #f5eef2;
+}
+
+.memo-para-block {
+  margin-bottom: 4px;
+  font-size: 10.5pt;
+}
+
+.memo-para-line {
+  margin-bottom: 2px;
+}
+
+.memo-para-name {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.memo-para-name[contenteditable]:hover,
+.memo-para-name[contenteditable]:focus {
+  outline: 1px dashed #7d2447;
+  background: #f5eef2;
+}
+
+.memo-para-cargo {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.memo-para-cargo[contenteditable]:hover,
+.memo-para-cargo[contenteditable]:focus {
+  outline: 1px dashed #7d2447;
+  background: #f5eef2;
+}
+
+.memo-de-block {
+  margin-bottom: 4px;
+  font-size: 10.5pt;
+}
+
+.memo-de-line {
+  margin-bottom: 2px;
+}
+
+.memo-de-name {
+  font-weight: 700;
+}
+
+.memo-de-cargo {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.memo-asunto {
+  font-weight: 700;
+  margin-bottom: 18px;
+  font-size: 10.5pt;
+}
+
+/* Memo table */
+.tabla-memo {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14px 0;
+  font-size: 9pt;
+}
+.tabla-memo th {
+  background: #7D2447;
+  border: 0.5px solid rgba(255,255,255,0.5);
+  padding: 5px 6px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 8.5pt;
+  color: #fff;
+}
+.tabla-memo td {
+  border: 0.5px solid #999;
+  padding: 4px 6px;
+  text-align: center;
+  font-size: 8.5pt;
+}
+
+/* Memo firma */
+.memo-firma {
+  text-align: center;
+  margin-top: 30px;
+}
+
+/* Memo CCP */
+.memo-ccp {
+  font-size: 7pt;
+  margin-top: 24px;
+  line-height: 1.4;
+}
+.memo-ccp div[contenteditable]:hover,
+.memo-ccp div[contenteditable]:focus {
+  outline: 1px dashed #7d2447;
+  background: #f5eef2;
+}
+
+.memo-page-num {
+  font-size: 9pt;
+  text-align: right;
+  margin-bottom: 4px;
+  opacity: 0.65;
+}
+
+/* Additional memo styles */
+.header-date {
+  font-size: 10.5pt;
+  margin-top: 2px;
+  opacity: 0.65;
+}
+.header-date[contenteditable]:hover,
+.header-date[contenteditable]:focus {
+  outline: 1px dashed #7d2447;
+  background: #f5eef2;
+}
+
+.destinatario-block {
+  margin-bottom: 8px;
+}
+
+.destinatario-label {
+  font-weight: 700;
+  display: inline;
+}
+
+.ccp-header {
+  font-weight: 700;
+}
+
+.ccp-folio {
+  margin-top: 2px;
+}
+
+.memo-content {
+  padding: 1.5cm 3.0cm 0.5cm;
+}
+
+.table-cont-measure {
+  width: 100%;
+}
+
+/* Column widths for memo table */
+.tabla-memo .col-no { width: 35px; }
+.tabla-memo .col-st { width: 55px; }
+.tabla-memo .col-oficio { width: auto; min-width: 120px; }
+.tabla-memo .col-ciudadano { width: auto; min-width: 130px; }
+.tabla-memo .col-fecha { width: 75px; white-space: nowrap; text-align: center; }
+.tabla-memo .col-peticion { width: auto; min-width: 200px; }

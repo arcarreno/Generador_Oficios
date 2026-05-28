@@ -3,17 +3,30 @@ import UploadButton from './components/UploadButton'
 import SheetSelector from './components/SheetSelector'
 import RecipientList from './components/RecipientList'
 import VistaOficio from './components/VistaOficio'
+import MemoTypeCards from './components/MemoTypeCards'
+import MemoSelectRows from './components/MemoSelectRows'
+import VistaMemo from './components/VistaMemo'
 import ErrorBoundary from './components/ErrorBoundary'
 import { parseWorkbook, getDataSheets, getRecipients } from './utils/excelParser'
+import { parseMemoWorkbook, getMemoGroups } from './utils/memo/parser'
 import './App.css'
 
 export default function App() {
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  // --- Estado para oficios ---
   const [workbook, setWorkbook] = useState(null)
   const [sheets, setSheets] = useState([])
   const [recipients, setRecipients] = useState([])
   const [selectedRecipient, setSelectedRecipient] = useState(null)
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+
+  // --- Estado para memorandums ---
+  const [memoGroups, setMemoGroups] = useState([])
+  const [selectedMemoGroup, setSelectedMemoGroup] = useState(null)
+  const [selectedMemoRows, setSelectedMemoRows] = useState(null)
+
+  // ========== OFICIOS ==========
 
   const handleFileLoad = useCallback((data) => {
     setError('')
@@ -46,7 +59,6 @@ export default function App() {
         return
       }
       setRecipients(list)
-      // Liberamos el workbook ya que no se necesita más
       setWorkbook(null)
     } catch (err) {
       setError(err.message || 'Error al procesar los datos de la hoja.')
@@ -70,6 +82,92 @@ export default function App() {
   const handleBackLetter = useCallback(() => {
     setSelectedRecipient(null)
   }, [])
+
+  // ========== MEMORANDUMS ==========
+
+  const handleMemoFileLoad = useCallback((data) => {
+    setError('')
+    setLoading(true)
+    try {
+      const wb = parseMemoWorkbook(data)
+      const groups = getMemoGroups(wb, wb.SheetNames[0])
+      if (groups.length === 0) {
+        setError('No se encontraron tipos de memorandum en este archivo.')
+        return
+      }
+      setMemoGroups(groups)
+      setSelectedMemoGroup(null)
+      setSelectedMemoRows(null)
+    } catch (err) {
+      setError(err.message || 'Error al procesar el archivo de memorandums.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const handleMemoGroupSelect = useCallback((group) => {
+    setSelectedMemoGroup(group)
+  }, [])
+
+  const handleMemoGenerate = useCallback((selectedRows, group) => {
+    setSelectedMemoRows(selectedRows)
+  }, [])
+
+  const handleBackMemoCards = useCallback(() => {
+    setMemoGroups([])
+    setSelectedMemoGroup(null)
+    setSelectedMemoRows(null)
+    setError('')
+  }, [])
+
+  const handleBackMemoRows = useCallback(() => {
+    setSelectedMemoGroup(null)
+    setSelectedMemoRows(null)
+    setError('')
+  }, [])
+
+  const handleBackMemoView = useCallback(() => {
+    setSelectedMemoRows(null)
+    setError('')
+  }, [])
+
+  // ========== RENDER ==========
+
+  if (selectedMemoRows && selectedMemoGroup) {
+    return (
+      <ErrorBoundary onReset={handleBackMemoView}>
+        <VistaMemo
+          rows={selectedMemoRows}
+          groupConfig={selectedMemoGroup}
+          onBack={handleBackMemoView}
+        />
+      </ErrorBoundary>
+    )
+  }
+
+  if (selectedMemoGroup) {
+    return (
+      <ErrorBoundary onReset={handleBackMemoRows}>
+        <MemoSelectRows
+          group={selectedMemoGroup}
+          onGenerate={handleMemoGenerate}
+          onBack={handleBackMemoRows}
+        />
+      </ErrorBoundary>
+    )
+  }
+
+  if (memoGroups.length > 0) {
+    return (
+      <ErrorBoundary onReset={handleBackMemoCards}>
+        <MemoTypeCards
+          groups={memoGroups}
+          onSelect={handleMemoGroupSelect}
+          onBack={handleBackMemoCards}
+        />
+      </ErrorBoundary>
+    )
+  }
 
   if (selectedRecipient) {
     return (
@@ -110,11 +208,9 @@ export default function App() {
   }
 
   return (
-    <ErrorBoundary
-      onReset={() => setError('')}
-    >
-      <UploadButton onFileLoad={handleFileLoad} />
-      {loading && <div style={{ textAlign: 'center', marginTop: 20, color: '#666' }}>Procesando archivo...</div>}
+    <ErrorBoundary onReset={() => setError('')}>
+      <UploadButton onFileLoad={handleFileLoad} onMemoFileLoad={handleMemoFileLoad} />
+      {loading && <div className="loading-text">Procesando archivo...</div>}
       {error && !loading && <div className="global-error">{error}</div>}
     </ErrorBoundary>
   )

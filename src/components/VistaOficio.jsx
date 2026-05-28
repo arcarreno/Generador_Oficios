@@ -8,11 +8,12 @@ import DOMPurify from 'dompurify'
 import letterhead from '../assets/letterhead.jpg'
 
 const PX_PER_CM = 37.8
-const FOOTER_TEXT_CM = 24.70
+const FOOTER_TEXT_CM = 24
 const PAGE1_CONTENT_H = (FOOTER_TEXT_CM - 1.5) * PX_PER_CM
 const CONT_CONTENT_H = (FOOTER_TEXT_CM - 4.5) * PX_PER_CM
 const TOP_PAD_P1 = 1.5
 const TOP_PAD_CONT = 4.5
+const TABLE_MARGIN_PX = 28 // 14px top + 14px bottom from .tabla-oficio margin
 
 export default function VistaOficio({ recipient, rows, onBack }) {
   const cargo = useMemo(() => getCargo(recipient.name), [recipient.name])
@@ -29,6 +30,9 @@ export default function VistaOficio({ recipient, rows, onBack }) {
   const [animationDone, setAnimationDone] = useState(false)
   const [rowsData, setRowsData] = useState(rows.map((r, i) => ({ ...r, _origIdx: i })))
   const [colWidths, setColWidths] = useState({})
+  const [ccpPosition, setCcpPosition] = useState({ x: 0, y: 0 })
+  const [isDraggingCcp, setIsDraggingCcp] = useState(false)
+  const ccpDragStart = useRef({ mouseX: 0, mouseY: 0, elemX: 0, elemY: 0 })
   const [editData, setEditData] = useState({
     destinatario: info.destinatario,
     cargo,
@@ -187,6 +191,35 @@ export default function VistaOficio({ recipient, rows, onBack }) {
       document.querySelectorAll('.particle-container').forEach(el => el.remove())
     }
   }, [])
+
+  const startDragCcp = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDraggingCcp(true)
+    ccpDragStart.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      elemX: ccpPosition.x,
+      elemY: ccpPosition.y,
+    }
+    document.addEventListener('mousemove', onDragCcpMove)
+    document.addEventListener('mouseup', onDragCcpEnd)
+  }
+
+  const onDragCcpMove = (e) => {
+    const dx = e.clientX - ccpDragStart.current.mouseX
+    const dy = e.clientY - ccpDragStart.current.mouseY
+    setCcpPosition({
+      x: ccpDragStart.current.elemX + dx,
+      y: ccpDragStart.current.elemY + dy,
+    })
+  }
+
+  const onDragCcpEnd = () => {
+    setIsDraggingCcp(false)
+    document.removeEventListener('mousemove', onDragCcpMove)
+    document.removeEventListener('mouseup', onDragCcpEnd)
+  }
 
   const handleExportPdf = async () => {
     setExporting(true)
@@ -392,17 +425,21 @@ export default function VistaOficio({ recipient, rows, onBack }) {
       const isRow = id.startsWith('row-')
       const isBlock = id.startsWith('block-')
 
-      if (isRow && cur.rowIds.length === 0 && theadH > 0) {
-        effectiveH += theadH
+      // First row on a page: add thead height + table margin
+      if (isRow && cur.rowIds.length === 0) {
+        if (theadH > 0) effectiveH += theadH
+        effectiveH += TABLE_MARGIN_PX
       }
 
+      // Check if this segment would overflow the page
       if (accumulated + effectiveH > limit && accumulated > 0) {
         cur.accumulated = accumulated
         result.push(cur)
         cur = { isFirst: false, segmentIds: [], rowIds: [], blockTypes: [] }
         accumulated = 0
         limit = CONT_CONTENT_H
-        if (isRow) effectiveH = seg.height + theadH
+        // New page first row: add thead + table margin
+        if (isRow) effectiveH = seg.height + theadH + TABLE_MARGIN_PX
       }
 
       if (id === 'block-ccp') ccpSegHeight = effectiveH
@@ -552,12 +589,46 @@ export default function VistaOficio({ recipient, rows, onBack }) {
 
     if (blockType === 'ccp') {
       return (
-        <div key={`b-${blockType}`} data-block="ccp" className={`block-item${isOver ? ' drag-over' : ''}${isBefore ? ' drag-before' : ''}${isDragging ? ' dragging' : ''}`}>
-          <div className="drag-handle" onMouseDown={e => startDrag('ccp', e)} title="Arrastrar para reordenar">⠿</div>
+        <div key={`b-${blockType}`} className="block-item ccp-draggable-oficio"
+          style={{
+            position: 'absolute',
+            left: `${ccpPosition.x}px`,
+            top: `${ccpPosition.y}px`,
+            cursor: isDraggingCcp ? 'grabbing' : 'grab',
+            zIndex: 100,
+            background: 'transparent',
+            border: isDraggingCcp ? '1px dashed #7D2447' : '1px solid transparent',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            transition: isDraggingCcp ? 'none' : 'border-color 0.15s',
+          }}
+          onMouseDown={startDragCcp}
+        >
           <div className="oficio-ccp">
-            <div contentEditable suppressContentEditableWarning onBlur={e => edit('archivo', e)} dangerouslySetInnerHTML={{ __html: editData.archivo }} />
-            <div contentEditable suppressContentEditableWarning onBlur={e => edit('ccp', e)} dangerouslySetInnerHTML={{ __html: editData.ccp }} />
-            <div contentEditable suppressContentEditableWarning onBlur={e => edit('iniciales', e)} dangerouslySetInnerHTML={{ __html: editData.iniciales }} />
+            <div
+              contentEditable
+              suppressContentEditableWarning
+              onClick={e => e.stopPropagation()}
+              onMouseDown={e => e.stopPropagation()}
+              onBlur={e => edit('archivo', e)}
+              dangerouslySetInnerHTML={{ __html: editData.archivo }}
+            />
+            <div
+              contentEditable
+              suppressContentEditableWarning
+              onClick={e => e.stopPropagation()}
+              onMouseDown={e => e.stopPropagation()}
+              onBlur={e => edit('ccp', e)}
+              dangerouslySetInnerHTML={{ __html: editData.ccp }}
+            />
+            <div
+              contentEditable
+              suppressContentEditableWarning
+              onClick={e => e.stopPropagation()}
+              onMouseDown={e => e.stopPropagation()}
+              onBlur={e => edit('iniciales', e)}
+              dangerouslySetInnerHTML={{ __html: editData.iniciales }}
+            />
           </div>
         </div>
       )
@@ -703,8 +774,17 @@ export default function VistaOficio({ recipient, rows, onBack }) {
                     return renderTable(pageRows)
                   })()}
 
-                  {renderBlocks(page.blockTypes)}
+                  {/* Blocks for this page */}
+                  {renderBlocks(page.blockTypes.filter(b => b !== 'ccp'))}
                 </div>
+
+                {/* CCP — draggable, rendered outside content flow */}
+                {page.blockTypes.includes('ccp') && i === measuredPages.length - 1 && (
+                  <div style={{ position: 'absolute', bottom: '5.5cm', left: '3.0cm', zIndex: 100 }}>
+                    {renderBlocks(['ccp'])}
+                  </div>
+                )}
+
                 <div className="oficio-footer">
                   <div className="footer-text">
                     GOBIERNO DE LA CIUDAD 2024 - 2027<br />
@@ -720,6 +800,16 @@ export default function VistaOficio({ recipient, rows, onBack }) {
       )}
 
       <ExportModal show={exporting} animationDone={animationDone} onClose={handleModalClose} />
+
+      <style>{`
+        .ccp-draggable-oficio:hover {
+          border-color: rgba(125,36,71,0.3) !important;
+        }
+        .ccp-draggable-oficio .oficio-ccp {
+          white-space: nowrap;
+          min-width: 16.6cm;
+        }
+      `}</style>
     </div>
   )
 }
