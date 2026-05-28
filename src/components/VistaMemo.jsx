@@ -6,7 +6,7 @@ import { exportMemoToPdf } from '../utils/exportMemoPdf'
 import ExportModal from './ExportModal'
 
 const PX_PER_CM = 37.8
-const FOOTER_TEXT_CM = 24.70
+const FOOTER_TEXT_CM = 24
 const TOP_PAD_P1 = 5.5
 const TOP_PAD_CONT = 5.5
 const PAGE1_CONTENT_H = (FOOTER_TEXT_CM - TOP_PAD_P1) * PX_PER_CM
