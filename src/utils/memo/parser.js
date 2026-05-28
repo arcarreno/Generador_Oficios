@@ -114,11 +114,11 @@ export function getMemoGroups(workbook, sheetName) {
     }
 
     groupsMap[key].rows.push({
-      st: formatCellValue(row[COL.ST]),
-      oficioRecibido: formatCellValue(row[COL.OFICIO_RECIBIDO]),
-      ciudadano: formatCellValue(row[COL.CIUDADANO]),
+      st: (row[COL.ST] ?? '').toString().trim(),
+      oficioRecibido: (row[COL.OFICIO_RECIBIDO] ?? '').toString().trim(),
+      ciudadano: (row[COL.CIUDADANO] ?? '').toString().trim(),
       fechaRecibido: formatCellValue(row[COL.FECHA_RECIBIDO]),
-      peticion: formatCellValue(row[COL.PETICION]),
+      peticion: (row[COL.PETICION] ?? '').toString().trim(),
       selected: false,
     })
   }
