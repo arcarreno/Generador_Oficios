@@ -2,7 +2,7 @@ import { useState, useRef, useMemo, useCallback, useEffect, useLayoutEffect } fr
 import DOMPurify from 'dompurify'
 import letterhead from '../assets/letterhead.jpg'
 import { formatMemoDate, formatYearTag, fundamentoLegal, firma, asunto, deNombre, deCargo, cierreGenerico, iniciales } from '../utils/memo/common'
-import { exportMemoToPdf } from '../utils/exportMemoPdf'
+import { exportToPdf } from '../utils/exportPdf'
 import ExportModal from './ExportModal'
 
 const PX_PER_CM = 37.8
@@ -34,12 +34,6 @@ export default function VistaMemo({ rows, groupConfig, onBack }) {
   const [ccpPosition, setCcpPosition] = useState({ x: 0, y: 0 })
   const [isDraggingCcp, setIsDraggingCcp] = useState(false)
   const ccpDragStart = useRef({ mouseX: 0, mouseY: 0, elemX: 0, elemY: 0 })
-  const ccpRef = useRef(null)
-
-  const stValues = useMemo(() => {
-    const unique = [...new Set(rowsData.map(r => (r.st || '').trim()).filter(Boolean))]
-    return <strong>{unique.join(', ')}</strong>
-  }, [rowsData])
 
   const stValuesHtml = useMemo(() => {
     const unique = [...new Set(rowsData.map(r => (r.st || '').trim()).filter(Boolean))]
@@ -62,7 +56,8 @@ export default function VistaMemo({ rows, groupConfig, onBack }) {
     asunto,
     ccpText: (() => {
       const folio = `Folio: <strong>ST</strong>  ${stValuesHtml}`
-      return `C.c.p. ${templateConfig?.archivo || 'Archivo.'}<br>${folio}<br>${iniciales}`
+      const ccpLines = (templateConfig?.ccp || []).map(line => `<br>${line}`).join('')
+      return `C.c.p. ${templateConfig?.archivo || 'Archivo.'}${ccpLines}<br>${folio}<br>${iniciales}`
     })(),
   })
 
@@ -169,7 +164,7 @@ export default function VistaMemo({ rows, groupConfig, onBack }) {
     try {
       const elements = pageRefs.current.filter(Boolean)
       if (elements.length === 0) { setExporting(false); return }
-      await exportMemoToPdf(elements, groupConfig.label)
+      await exportToPdf(elements, groupConfig.label, 'memorandum')
       setAnimationDone(true)
     } catch (e) {
       alert('Error al generar PDF: ' + e.message)
@@ -179,12 +174,30 @@ export default function VistaMemo({ rows, groupConfig, onBack }) {
 
   const handleBold = (e) => {
     e.preventDefault()
-    document.execCommand('bold')
+    const sel = window.getSelection()
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return
+    const range = sel.getRangeAt(0)
+    let node = range.commonAncestorContainer
+    if (node.nodeType === Node.TEXT_NODE) node = node.parentNode
+    const existingBold = node?.closest?.('strong, b')
+    if (existingBold) {
+      const outer = existingBold.parentNode
+      while (existingBold.firstChild) outer.insertBefore(existingBold.firstChild, existingBold)
+      outer.removeChild(existingBold)
+    } else {
+      const strong = document.createElement('strong')
+      try { range.surroundContents(strong) } catch { const c = range.extractContents(); strong.appendChild(c); range.insertNode(strong) }
+    }
   }
 
   const handleNormal = (e) => {
     e.preventDefault()
-    document.execCommand('removeFormat')
+    const sel = window.getSelection()
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return
+    const range = sel.getRangeAt(0)
+    const text = range.toString()
+    range.deleteContents()
+    range.insertNode(document.createTextNode(text))
   }
 
   const handleModalClose = () => {
@@ -246,7 +259,7 @@ export default function VistaMemo({ rows, groupConfig, onBack }) {
         effectiveH += TABLE_MARGIN_PX
       }
 
-      if (accumulated + effectiveH > limit && accumulated > 0) {
+      if (accumulated + effectiveH > limit) {
         cur.accumulated = accumulated
         result.push(cur)
         cur = { isFirst: false, segmentIds: [], rowIds: [], blockTypes: [] }
@@ -520,6 +533,8 @@ export default function VistaMemo({ rows, groupConfig, onBack }) {
                 onBlur={e => edit('firmaLema', e)}
                 dangerouslySetInnerHTML={{ __html: editData.firmaLema }}
               />
+              <div style={{ lineHeight: '1.2' }}>&nbsp;</div>
+              <div style={{ lineHeight: '1.2' }}>&nbsp;</div>
               <div
                 className="firma-nombre"
                 contentEditable
@@ -541,7 +556,6 @@ export default function VistaMemo({ rows, groupConfig, onBack }) {
       if (blockType === 'ccp') {
         return (
           <div key={`b-${blockType}`} className="block-item ccp-draggable"
-            ref={ccpRef}
             style={{
               position: 'absolute',
               left: `${ccpPosition.x}px`,

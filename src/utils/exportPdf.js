@@ -2,7 +2,7 @@ import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 import { sanitizeFilename } from './excelParser'
 
-export async function exportToPdf(elements, recipientName) {
+export async function exportToPdf(elements, recipientName, filenamePrefix = 'oficio') {
   if (!elements || elements.length === 0) return
 
   const pages = await Promise.all(
@@ -32,5 +32,5 @@ export async function exportToPdf(elements, recipientName) {
     pdf.addImage(imgData, 'PNG', 0, 0, w, h)
   })
 
-  pdf.save(`oficio_${sanitizeFilename(recipientName || 'documento')}.pdf`)
+  pdf.save(`${filenamePrefix}_${sanitizeFilename(recipientName || 'documento')}.pdf`)
 }

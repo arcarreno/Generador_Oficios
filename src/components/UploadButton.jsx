@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import LiquidEther from './LiquidEther'
+import logo from '../assets/SEMOVINFRA.png'
 
 const MAX_SIZE = 50 * 1024 * 1024
 
@@ -51,6 +52,7 @@ export default function UploadButton({ onFileLoad, onMemoFileLoad }) {
       />
 
       <div className="absolute inset-0 z-10 flex flex-col items-center justify-center w-full h-full px-4">
+        <img src={logo} alt="SEMOVINFRA" className="h-20 mb-4 object-contain rounded-full" />
         <h1 className="text-3xl font-bold tracking-tight mb-10 text-white/90">
           Generador de Documentos SEMOVINFRA
         </h1>

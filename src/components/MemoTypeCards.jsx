@@ -30,7 +30,7 @@ export default function MemoTypeCards({ groups, onSelect, onBack }) {
           >
             <div className="memo-card-count">{group.rows.length}</div>
             <div className="memo-card-label">{group.label}</div>
-            <div className="memo-card-sub">{group.rows.length} solicitude{group.rows.length !== 1 ? 's' : ''}</div>
+            <div className="memo-card-sub">{group.rows.length} solicitud{group.rows.length !== 1 ? 'es' : ''}</div>
           </button>
         ))}
       </div>

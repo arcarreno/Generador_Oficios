@@ -1,6 +1,7 @@
 import ssiTemplate from './templates/ssi/index.js'
 import smsvTemplate from './templates/smsv/index.js'
 import dgppTemplate from './templates/dgpp/index.js'
+import juridicoTemplate from './templates/juridico/index.js'
 
 /**
  * Registry que mapea cada valor de Columna A del Excel MEMOS ST
@@ -32,12 +33,11 @@ export const TEMPLATE_MAP = {
     label: 'Dirección General de Proyectos',
     order: 3,
   },
-  // --- Pendiente ---
-  // 'DIRECTOR JURÍDICO': {
-  //   template: juridicoTemplate,
-  //   label: 'Director Jurídico',
-  //   order: 4,
-  // },
+  'DIRECTOR JURÍDICO': {
+    template: juridicoTemplate,
+    label: 'Director Jurídico',
+    order: 4,
+  },
 }
 
 /** Obtiene la config para un valor de Col A (case-insensitive) */

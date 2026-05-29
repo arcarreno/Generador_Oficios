@@ -371,7 +371,7 @@ body {
 }
 .tabla-oficio th {
   background: #E7E6E6;
-  border: 1px solid #000;
+  border: 0.5px solid #bbb;
   padding: 6px 8px;
   text-align: center;
   font-weight: 700;
@@ -379,7 +379,7 @@ body {
   position: relative;
 }
 .tabla-oficio td {
-  border: 1px solid #000;
+  border: 0.5px solid #bbb;
   padding: 4px 8px;
   text-align: center;
   font-size: 9pt;
@@ -464,14 +464,14 @@ tr:hover .row-delete-btn {
 }
 .tabla-contactos th {
   background: #E7E6E6;
-  border: 1px solid #000;
+  border: 0.5px solid #bbb;
   padding: 6px 8px;
   text-align: center;
   font-weight: 700;
   font-size: 10pt;
 }
 .tabla-contactos td {
-  border: 1px solid #000;
+  border: 0.5px solid #bbb;
   padding: 4px 8px;
   text-align: center;
   font-size: 10pt;
@@ -890,7 +890,7 @@ tr:hover .row-delete-btn {
 }
 .tabla-memo th {
   background: #7D2447;
-  border: 0.5px solid rgba(255,255,255,0.5);
+  border: 0.5px solid rgba(255,255,255,0.3);
   padding: 5px 6px;
   text-align: center;
   font-weight: 700;
@@ -898,7 +898,7 @@ tr:hover .row-delete-btn {
   color: #fff;
 }
 .tabla-memo td {
-  border: 0.5px solid #999;
+  border: 0.5px solid #bbb;
   padding: 4px 6px;
   text-align: center;
   font-size: 8.5pt;

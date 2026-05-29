@@ -1,11 +1,7 @@
 import { formatDate, contactos } from './oficioTemplate'
-import { escapeHtml, getCargo } from './excelParser'
+import { escapeHtml, sanitizeFilename, getCargo } from './excelParser'
 import DOMPurify from 'dompurify'
 import letterheadUrl from '../assets/letterhead.jpg'
-
-function sanitizeFilename(name) {
-  return name.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim().replace(/\s+/g, '_')
-}
 
 function safeHtml(str) {
   return DOMPurify.sanitize(str || '', { ALLOWED_TAGS: ['b', 'i', 'u', 'strong', 'em', 'br'] })

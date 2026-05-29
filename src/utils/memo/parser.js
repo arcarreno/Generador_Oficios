@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx'
 import { resolveTemplate } from './registry.js'
+import { escapeHtml } from '../excelParser.js'
 
 /**
  * Convierte un número serial de Excel a fecha legible (dd/mm/yyyy)

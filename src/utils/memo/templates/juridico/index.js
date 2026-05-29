@@ -1,9 +1,9 @@
-// TODO: Template pendiente para DIRECTOR JURÍDICO
-// Cuando esté definido, completar destinatario, cargo, parrafoFinal, ccp, archivo
 const juridicoTemplate = {
-  destinatario: '[[PENDIENTE]]',
-  cargo: '[[PENDIENTE]]',
-  parrafoFinal: '[[PENDIENTE]]',
+  destinatario: 'JULIO CÉSAR GIL TORRES',
+  cargo: 'DIRECTOR JURÍDICO',
+
+  parrafoFinal: `Por lo que, al tratarse de un asunto que se encuentra dentro del ámbito de sus facultades, se requiere dar el seguimiento adecuado a dicha petición, debiendo remitir copia de conocimiento a esta Secretaría Técnica de la respuesta otorgada al peticionario.`,
+
   ccp: [],
   archivo: 'Archivo.',
 }

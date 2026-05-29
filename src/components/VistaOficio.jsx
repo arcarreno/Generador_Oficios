@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo, useCallback, useEffect, useLayoutEffect } from 'react'
 import { getInfoTemplate, contactos, formatDate, formatYearTag } from '../utils/oficioTemplate'
-import { getCargo } from '../utils/excelParser'
+import { getCargo, escapeHtml } from '../utils/excelParser'
 import { exportToPdf } from '../utils/exportPdf'
 import { exportToWord } from '../utils/exportWord'
 import ExportModal from './ExportModal'
@@ -9,10 +9,10 @@ import letterhead from '../assets/letterhead.jpg'
 
 const PX_PER_CM = 37.8
 const FOOTER_TEXT_CM = 24
-const PAGE1_CONTENT_H = (FOOTER_TEXT_CM - 1.5) * PX_PER_CM
-const CONT_CONTENT_H = (FOOTER_TEXT_CM - 4.5) * PX_PER_CM
-const TOP_PAD_P1 = 1.5
-const TOP_PAD_CONT = 4.5
+const TOP_PAD_P1 = 5.5
+const TOP_PAD_CONT = 5.5
+const PAGE1_CONTENT_H = (FOOTER_TEXT_CM - TOP_PAD_P1) * PX_PER_CM
+const CONT_CONTENT_H = (FOOTER_TEXT_CM - TOP_PAD_CONT) * PX_PER_CM
 const TABLE_MARGIN_PX = 28 // 14px top + 14px bottom from .tabla-oficio margin
 
 export default function VistaOficio({ recipient, rows, onBack }) {
@@ -64,12 +64,30 @@ export default function VistaOficio({ recipient, rows, onBack }) {
 
   const handleBold = (e) => {
     e.preventDefault()
-    document.execCommand('bold')
+    const sel = window.getSelection()
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return
+    const range = sel.getRangeAt(0)
+    let node = range.commonAncestorContainer
+    if (node.nodeType === Node.TEXT_NODE) node = node.parentNode
+    const existingBold = node?.closest?.('strong, b')
+    if (existingBold) {
+      const outer = existingBold.parentNode
+      while (existingBold.firstChild) outer.insertBefore(existingBold.firstChild, existingBold)
+      outer.removeChild(existingBold)
+    } else {
+      const strong = document.createElement('strong')
+      try { range.surroundContents(strong) } catch { const c = range.extractContents(); strong.appendChild(c); range.insertNode(strong) }
+    }
   }
 
   const handleNormal = (e) => {
     e.preventDefault()
-    document.execCommand('removeFormat')
+    const sel = window.getSelection()
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return
+    const range = sel.getRangeAt(0)
+    const text = range.toString()
+    range.deleteContents()
+    range.insertNode(document.createTextNode(text))
   }
 
   const deleteRow = (index, e) => {
@@ -421,6 +439,9 @@ export default function VistaOficio({ recipient, rows, onBack }) {
     let ccpSegHeight = 0
     for (const seg of measured) {
       const id = seg.id
+      // Header is absolutely positioned — skip from content flow measurement
+      if (id === 'header') continue
+
       let effectiveH = seg.height
       const isRow = id.startsWith('row-')
       const isBlock = id.startsWith('block-')
@@ -432,7 +453,7 @@ export default function VistaOficio({ recipient, rows, onBack }) {
       }
 
       // Check if this segment would overflow the page
-      if (accumulated + effectiveH > limit && accumulated > 0) {
+      if (accumulated + effectiveH > limit) {
         cur.accumulated = accumulated
         result.push(cur)
         cur = { isFirst: false, segmentIds: [], rowIds: [], blockTypes: [] }
@@ -578,6 +599,8 @@ export default function VistaOficio({ recipient, rows, onBack }) {
               onBlur={e => edit('firmaCiudad', e)} dangerouslySetInnerHTML={{ __html: editData.firmaCiudad }} />
             <div className="firma-lema" contentEditable suppressContentEditableWarning
               onBlur={e => edit('firmaLema', e)} dangerouslySetInnerHTML={{ __html: editData.firmaLema }} />
+            <div style={{ lineHeight: '1.2' }}>&nbsp;</div>
+            <div style={{ lineHeight: '1.2' }}>&nbsp;</div>
             <div className="firma-nombre" contentEditable suppressContentEditableWarning
               onBlur={e => edit('firmaNombre', e)} dangerouslySetInnerHTML={{ __html: editData.firmaNombre }} />
             <div className="firma-cargo" contentEditable suppressContentEditableWarning
@@ -645,6 +668,11 @@ export default function VistaOficio({ recipient, rows, onBack }) {
         <div className="header-oficio-num" contentEditable suppressContentEditableWarning
           onBlur={e => setOficioFull(DOMPurify.sanitize(e.currentTarget?.innerHTML ?? ''))} dangerouslySetInnerHTML={{ __html: oficioFull }} />
       </div>
+    </>
+  )
+
+  const renderDestinatarioContent = () => (
+    <>
       <div className="destinatario-line">
         <span contentEditable suppressContentEditableWarning onBlur={e => edit('destinatario', e)} dangerouslySetInnerHTML={{ __html: editData.destinatario }} />
       </div>
@@ -676,16 +704,16 @@ export default function VistaOficio({ recipient, rows, onBack }) {
             <tr key={`r-${r._origIdx}`}>
               <td style={colStyle(0)}
                 contentEditable suppressContentEditableWarning
-                onBlur={e => editCell(r._origIdx, 'oficioRecibido', e)} dangerouslySetInnerHTML={{ __html: r.oficioRecibido }} />
+                onBlur={e => editCell(r._origIdx, 'oficioRecibido', e)} dangerouslySetInnerHTML={{ __html: escapeHtml(r.oficioRecibido) }} />
               <td style={colStyle(1)}
                 contentEditable suppressContentEditableWarning
-                onBlur={e => editCell(r._origIdx, 'peticion', e)} dangerouslySetInnerHTML={{ __html: r.peticion }} />
+                onBlur={e => editCell(r._origIdx, 'peticion', e)} dangerouslySetInnerHTML={{ __html: escapeHtml(r.peticion) }} />
               <td style={colStyle(2)}
                 contentEditable suppressContentEditableWarning
-                onBlur={e => editCell(r._origIdx, 'control', e)} dangerouslySetInnerHTML={{ __html: r.control }} />
+                onBlur={e => editCell(r._origIdx, 'control', e)} dangerouslySetInnerHTML={{ __html: escapeHtml(r.control) }} />
               <td className="last-cell" style={colStyle(3)}>
                 <span contentEditable suppressContentEditableWarning
-                  onBlur={e => editCell(r._origIdx, 'turnadoA', e)} dangerouslySetInnerHTML={{ __html: r.turnadoA }} />
+                  onBlur={e => editCell(r._origIdx, 'turnadoA', e)} dangerouslySetInnerHTML={{ __html: escapeHtml(r.turnadoA) }} />
                 <button className="row-delete-btn" onClick={e => deleteRow(r._origIdx, e)} title="Eliminar fila">×</button>
               </td>
             </tr>
@@ -716,9 +744,14 @@ export default function VistaOficio({ recipient, rows, onBack }) {
       {/* Measurement container — hidden, continuous flow for real DOM measurement */}
       <div ref={measureRef} className="oficio-wrapper"
         style={{ ...pageStyle, visibility: 'hidden', position: 'fixed', top: 0, left: '-9999px', zIndex: -1 }}>
+        {/* Header — absolutely positioned, measured separately */}
+        <div data-segment="header" className="oficio-header-abs">
+          {renderHeaderContent()}
+        </div>
+
         <div className="oficio-content" style={{ paddingTop: `${TOP_PAD_P1}cm`, paddingBottom: '0.5cm' }}>
-          <div data-segment="header">
-            {renderHeaderContent()}
+          <div data-segment="destinatario-block">
+            {renderDestinatarioContent()}
           </div>
 
           {rowsData.length > 0 && (
@@ -736,10 +769,10 @@ export default function VistaOficio({ recipient, rows, onBack }) {
                 <tbody>
                   {rowsData.map(r => (
                     <tr key={r._origIdx} data-segment={`row-${r._origIdx}`}>
-                      <td style={colStyle(0)} dangerouslySetInnerHTML={{ __html: r.oficioRecibido }} />
-                      <td style={colStyle(1)} dangerouslySetInnerHTML={{ __html: r.peticion }} />
-                      <td style={colStyle(2)} dangerouslySetInnerHTML={{ __html: r.control }} />
-                      <td className="last-cell" style={colStyle(3)} dangerouslySetInnerHTML={{ __html: r.turnadoA }} />
+                      <td style={colStyle(0)} dangerouslySetInnerHTML={{ __html: escapeHtml(r.oficioRecibido) }} />
+                      <td style={colStyle(1)} dangerouslySetInnerHTML={{ __html: escapeHtml(r.peticion) }} />
+                      <td style={colStyle(2)} dangerouslySetInnerHTML={{ __html: escapeHtml(r.control) }} />
+                      <td className="last-cell" style={colStyle(3)} dangerouslySetInnerHTML={{ __html: escapeHtml(r.turnadoA) }} />
                     </tr>
                   ))}
                 </tbody>
@@ -763,8 +796,18 @@ export default function VistaOficio({ recipient, rows, onBack }) {
             return (
               <div key={`page-${i}`} className={`oficio-wrapper${!page.isFirst ? ' page-continuation' : ''}`}
                 ref={el => { pageRefs.current[i] = el }} style={pageStyle}>
+                {/* Header — absolutely positioned, same spot on ALL pages */}
+                <div className="oficio-header-abs">
+                  {renderHeaderContent()}
+                </div>
+
                 <div className="oficio-content" style={{ paddingTop: `${topPad}cm`, paddingBottom: `${page.paddingBottom}cm` }}>
-                  {page.segmentIds.includes('header') && renderHeaderContent()}
+                  {/* Destinatario + Fundamento only on page 1 */}
+                  {page.isFirst && (
+                    <div data-segment="destinatario-block">
+                      {renderDestinatarioContent()}
+                    </div>
+                  )}
 
                   {page.rowIds.length > 0 && (() => {
                     const pageRows = page.rowIds.map(id => {
@@ -802,6 +845,13 @@ export default function VistaOficio({ recipient, rows, onBack }) {
       <ExportModal show={exporting} animationDone={animationDone} onClose={handleModalClose} />
 
       <style>{`
+        .oficio-header-abs {
+          position: absolute;
+          top: 1.5cm;
+          right: 3.0cm;
+          text-align: right;
+          z-index: 2;
+        }
         .ccp-draggable-oficio:hover {
           border-color: rgba(125,36,71,0.3) !important;
         }
